@@ -1,0 +1,13 @@
+[
+  {
+    "id": "8099fca32c89adfd265a1ac1",
+    "name": "Test User",
+    "email": "test@example.com",
+    "company": null,
+    "budget": null,
+    "message": "Hello from fullstack test",
+    "createdAt": "2026-07-29T22:05:30.103Z",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/8.5.0"
+  }
+]

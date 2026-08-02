@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — Webolite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #030712; --surface: #0B1220; --elevated: #111827;
+      --primary: #7C6FFF; --primary-light: #A59BFF; --secondary: #22D3EE;
+      --text: #F8FAFC; --muted: #94A3B8; --dim: #64748B;
+      --border: rgba(255,255,255,0.07); --danger: #F43F5E; --success: #10B981;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    button, input, select, textarea { font-family: inherit; font-size: inherit; border: none; outline: none; background: none; color: inherit; }
+    a { color: inherit; text-decoration: none; }
+
+    /* Login */
+    .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; }
+    .login-card h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 8px; }
+    .login-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 28px; }
+    .login-card input { width: 100%; padding: 14px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+    .login-card input:focus { border-color: var(--primary); }
+    .login-error { color: var(--danger); font-size: 0.85rem; margin-bottom: 12px; display: none; }
+
+    /* Layout */
+    .admin { display: none; min-height: 100vh; }
+    .admin.active { display: flex !important; }
+    .login-screen { display: flex; }
+    .sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); padding: 24px 16px; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 10; }
+    .sidebar-logo { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.15rem; padding: 0 12px 24px; display: flex; align-items: center; gap: 10px; }
+    .sidebar-logo span { width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: #fff; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; font-size: 0.9rem; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.2s; margin-bottom: 4px; }
+    .nav-item:hover, .nav-item.active { background: rgba(124,111,255,0.12); color: var(--text); }
+    .nav-item.active { color: var(--primary-light); }
+    .sidebar-footer { margin-top: auto; padding: 16px 12px 0; border-top: 1px solid var(--border); }
+    .main { margin-left: 240px; flex: 1; padding: 32px 40px; max-width: 1100px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+    .page-header h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; }
+
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .stat-box .label { font-size: 0.8rem; color: var(--dim); margin-bottom: 6px; }
+    .stat-box .value { font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; font-weight: 700; background: linear-gradient(135deg, var(--primary-light), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    /* Cards / Tables */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+    .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; justify-content: space-between; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th { text-align: left; padding: 12px 16px; color: var(--dim); font-weight: 500; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-pending { background: rgba(251,191,36,0.15); color: #FBBF24; }
+    .badge-approved { background: rgba(16,185,129,0.15); color: #10B981; }
+    .badge-rejected { background: rgba(244,63,94,0.15); color: #F43F5E; }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: #6B5FE8; }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+    .btn-ghost { background: transparent; border-color: var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+    .btn-danger { background: rgba(244,63,94,0.12); color: var(--danger); border-color: rgba(244,63,94,0.2); }
+    .btn-danger:hover { background: rgba(244,63,94,0.22); }
+    .btn-success { background: rgba(16,185,129,0.12); color: var(--success); border-color: rgba(16,185,129,0.2); }
+    .btn-success:hover { background: rgba(16,185,129,0.22); }
+    .btn-block { width: 100%; justify-content: center; padding: 14px; }
+
+    /* Forms */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); }
+    .form-group textarea { min-height: 100px; resize: vertical; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: none; align-items: center; justify-content: center; padding: 24px; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+    .modal h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
+    .empty { text-align: center; padding: 48px 20px; color: var(--dim); font-size: 0.95rem; }
+    .text-muted { color: var(--muted); }
+    .text-sm { font-size: 0.8rem; }
+    .truncate { max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--elevated); border: 1px solid var(--border); padding: 14px 20px; border-radius: 10px; font-size: 0.9rem; z-index: 200; opacity: 0; transform: translateY(12px); transition: all 0.3s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: rgba(16,185,129,0.3); }
+    .toast.error { border-color: rgba(244,63,94,0.3); }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 100%; position: relative; flex-direction: row; flex-wrap: wrap; padding: 12px; gap: 4px; }
+      .sidebar-logo { padding: 8px; width: 100%; }
+      .sidebar-footer { margin-top: 0; border: none; padding: 8px; }
+      .main { margin-left: 0; padding: 20px 16px; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .admin.active { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <h1>Webolite Admin</h1>
+      <p>Sign in with your admin email and password.</p>
+      <div class="login-error" id="loginError">Invalid credentials</div>
+      <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" value="admin@webolite.com" style="width:100%;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">
+      <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password" style="width:100%;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;">
+      <button class="btn btn-primary btn-block" id="loginBtn">Sign In</button>
+      <p style="margin-top:16px;font-size:0.8rem;color:var(--dim);text-align:center;line-height:1.7;">
+        Default login:<br>
+        <code style="color:var(--primary-light);">admin@webolite.com</code><br>
+        <code style="color:var(--primary-light);">admin123</code>
+      </p>
+    </div>
+  </div>
+
+  <!-- Admin -->
+  <div class="admin" id="adminApp">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><span>W</span> Webolite Admin</div>
+      <div class="nav-item active" data-page="dashboard">📊 Dashboard</div>
+      <div class="nav-item" data-page="visitors">👁 Live Visitors</div>
+      <div class="nav-item" data-page="contacts">📩 Contacts</div>
+      <div class="nav-item" data-page="testimonials">⭐ Testimonials</div>
+      <div class="nav-item" data-page="portfolio">🎨 Portfolio</div>
+      <div class="nav-item" data-page="content">📝 Site Content</div>
+      <div class="nav-item" data-page="newsletter">📧 Newsletter</div>
+      <div class="nav-item" data-page="admins">👤 Admin Users</div>
+      <div class="nav-item" data-page="settings">⚙️ Settings</div>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-sm btn-block" id="logoutBtn">Log Out</button>
+        <a href="index.html" class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;">← View Site</a>
+      </div>
+    </aside>
+
+    <div class="main">
+      <!-- Dashboard -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-header"><h2>Dashboard</h2></div>
+        <div class="stats-row" id="dashStats">
+          <div class="stat-box"><div class="label">Online Now</div><div class="value" id="statOnline">—</div></div>
+          <div class="stat-box"><div class="label">Views Today</div><div class="value" id="statViewsToday">—</div></div>
+          <div class="stat-box"><div class="label">Contacts</div><div class="value" id="statContacts">—</div></div>
+          <div class="stat-box"><div class="label">Reviews</div><div class="value" id="statReviews">—</div></div>
+          <div class="stat-box"><div class="label">Pending</div><div class="value" id="statPending">—</div></div>
+          <div class="stat-box"><div class="label">Subscribers</div><div class="value" id="statSubs">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Recent Contacts</div>
+          <div id="dashRecent"><div class="empty">Loading...</div></div>
+        </div>
+      </div>
+
+      
+      <!-- Live Visitors -->
+      <div class="page" id="page-visitors">
+        <div class="page-header">
+          <h2>Live Visitors</h2>
+          <button class="btn btn-ghost btn-sm" id="refreshVisitorsBtn">Refresh</button>
+        </div>
+        <div class="stats-row" id="visitorStats">
+          <div class="stat-box"><div class="label">Online Now</div><div class="value" id="vActive">—</div></div>
+          <div class="stat-box"><div class="label">Views Today</div><div class="value" id="vToday">—</div></div>
+          <div class="stat-box"><div class="label">Total Views</div><div class="value" id="vTotal">—</div></div>
+          <div class="stat-box"><div class="label">Top Page Today</div><div class="value" id="vTop" style="font-size:1rem;">—</div></div>
+        </div>
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">Active Sessions <span class="text-sm text-muted" id="liveDot" style="color:#10B981;">● Live</span></div>
+          <div id="activeSessionsTable"><div class="empty">No one online right now</div></div>
+        </div>
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-header">Top Pages Today</div>
+          <div id="topPagesTable"><div class="empty">No data yet</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Recent Page Views</div>
+          <div id="recentVisitsTable"><div class="empty">No visits yet</div></div>
+        </div>
+      </div>
+
+      <!-- Contacts -->
+      <div class="page" id="page-contacts">
+        <div class="page-header"><h2>Contacts</h2></div>
+        <div class="card"><div id="contactsTable"><div class="empty">Loading...</div></div></div>
+      </div>
+
+      <!-- Testimonials -->
+      <div class="page" id="page-testimonials">
+        <div class="page-header"><h2>Testimonials</h2></div>
+        <div class="card"><div id="testimonialsTable"><div class="empty">Loading...</div></div></div>
+      </div>
+
+      <!-- Portfolio -->
+      <div class="page" id="page-portfolio">
+        <div class="page-header">
+          <h2>Portfolio</h2>
+          <button class="btn btn-primary btn-sm" id="addProjectBtn">+ Add Project</button>
+        </div>
+        <div class="card"><div id="portfolioTable"><div class="empty">Loading...</div></div></div>
+      </div>
+
+      <!-- Newsletter -->
+      <div class="page" id="page-newsletter">
+        <div class="page-header"><h2>Newsletter</h2></div>
+        <div class="card"><div id="newsletterTable"><div class="empty">Loading...</div></div></div>
+      </div>
+
+      
+      
+      <!-- Site Content -->
+      <div class="page" id="page-content">
+        <div class="page-header">
+          <h2>Site Content</h2>
+          <p class="text-muted text-sm">Edit every section of the homepage</p>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;" id="contentTabs">
+          <button class="btn btn-primary btn-sm content-tab active" data-section="hero">Hero</button>
+          <button class="btn btn-ghost btn-sm content-tab" data-section="services">Services</button>
+          <button class="btn btn-ghost btn-sm content-tab" data-section="process">Process</button>
+          <button class="btn btn-ghost btn-sm content-tab" data-section="pricing">Pricing</button>
+          <button class="btn btn-ghost btn-sm content-tab" data-section="faq">FAQ</button>
+          <button class="btn btn-ghost btn-sm content-tab" data-section="tech">Tech Stack</button>
+          <button class="btn btn-ghost btn-sm content-tab" data-section="cta">CTA</button>
+          <button class="btn btn-ghost btn-sm content-tab" data-section="why">Why Us</button>
+          <button class="btn btn-ghost btn-sm content-tab" data-section="footer">Footer</button>
+        </div>
+
+        <div class="card" style="padding:24px;">
+          <div id="contentEditor">
+            <div class="empty">Select a section to edit</div>
+          </div>
+          <div style="margin-top:20px;display:flex;gap:10px;">
+            <button class="btn btn-primary" id="saveContentBtn">Save Section</button>
+            <span id="contentSaveStatus" class="text-sm text-muted"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Users -->
+      <div class="page" id="page-admins">
+        <div class="page-header">
+          <h2>Admin Users</h2>
+          <button class="btn btn-primary btn-sm" id="addAdminBtn">+ Add Admin</button>
+        </div>
+        <div class="card"><div id="adminsTable"><div class="empty">Loading...</div></div></div>
+        <div class="card" style="padding:24px;margin-top:20px;">
+          <h3 style="font-size:1rem;margin-bottom:16px;">Change My Password</h3>
+          <form id="changePasswordForm">
+            <div class="form-group">
+              <label>Current Password</label>
+              <input type="password" id="oldPassword" required>
+            </div>
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" id="newPassword" required minlength="6">
+            </div>
+            <button type="submit" class="btn btn-primary">Update Password</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="page" id="page-settings">
+        <div class="page-header"><h2>Site Settings</h2></div>
+        <div class="card" style="padding:24px;">
+          <form id="settingsForm">
+            <div class="form-group">
+              <label>Hero Title (use \n for line break)</label>
+              <input type="text" id="setHeroTitle" placeholder="We Build.\nYou Grow.">
+            </div>
+            <div class="form-group">
+              <label>Hero Subtitle</label>
+              <textarea id="setHeroSubtitle" rows="3"></textarea>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Projects Count</label>
+                <input type="number" id="setProjects">
+              </div>
+              <div class="form-group">
+                <label>Satisfaction %</label>
+                <input type="number" id="setSatisfaction">
+              </div>
+              <div class="form-group">
+                <label>Years Experience</label>
+                <input type="number" id="setYears">
+              </div>
+              <div class="form-group">
+                <label>Happy Clients</label>
+                <input type="number" id="setClients">
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Contact Email</label>
+                <input type="email" id="setEmail">
+              </div>
+              <div class="form-group">
+                <label>Contact Phone</label>
+                <input type="text" id="setPhone">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Portfolio Modal -->
+  <div class="modal-overlay" id="projectModal">
+    <div class="modal">
+      <h3 id="modalTitle">Add Project</h3>
+      <form id="projectForm">
+        <input type="hidden" id="projectId">
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" id="projTitle" required placeholder="Project name">
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Category Label</label>
+            <input type="text" id="projCatLabel" placeholder="SaaS Website">
+          </div>
+          <div class="form-group">
+            <label>Filter Categories</label>
+            <input type="text" id="projCategory" placeholder="web design app ecommerce">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Image URL</label>
+          <input type="url" id="projImage" placeholder="https://example.com/image.jpg">
+        </div>
+        <div class="form-group">
+          <label>Gradient (if no image)</label>
+          <select id="projGradient">
+            <option value="gradient-1">Purple-Blue</option>
+            <option value="gradient-2">Pink-Orange</option>
+            <option value="gradient-3">Cyan-Indigo</option>
+            <option value="gradient-4">Green-Cyan</option>
+            <option value="gradient-5">Violet-Pink</option>
+            <option value="gradient-6">Amber-Red</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tags (comma separated)</label>
+          <input type="text" id="projTags" placeholder="React, Node.js, PostgreSQL">
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Live Demo URL</label>
+            <input type="url" id="projDemo" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label>Case Study URL</label>
+            <input type="url" id="projCase" placeholder="https://...">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="modalCancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Project</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  
+  <!-- Admin User Modal -->
+  <div class="modal-overlay" id="adminModal">
+    <div class="modal">
+      <h3>Add Admin User</h3>
+      <form id="adminUserForm">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="adminName" placeholder="Admin name">
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" id="adminEmail" required placeholder="admin@example.com">
+        </div>
+        <div class="form-group">
+          <label>Password *</label>
+          <input type="password" id="adminPassword" required minlength="6" placeholder="Min 6 characters">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="adminModalCancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Admin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function () {
+    const API = '';
+    function safeGet(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSet(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+    function safeRemove(key) {
+      try { localStorage.removeItem(key); } catch (e) {}
+    }
+    let token = safeGet('webolite_admin_token') || '';
+
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => document.querySelectorAll(s);
+
+    function toast(msg, type) {
+      const el = $('#toast');
+      el.textContent = msg;
+      el.className = 'toast show ' + (type || '');
+      setTimeout(() => el.classList.remove('show'), 2800);
+    }
+
+    async function api(path, opts = {}) {
+      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      const res = await fetch(API + path, { ...opts, headers });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        logout();
+        throw new Error('Session expired');
+      }
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    /* Auth */
+    function showLogin(msg) {
+      token = '';
+      safeRemove('webolite_admin_token');
+      $('#adminApp').classList.remove('active');
+      $('#adminApp').style.display = 'none';
+      $('#loginScreen').style.display = 'flex';
+      if (msg) {
+        $('#loginError').textContent = msg;
+        $('#loginError').style.display = 'block';
+      } else {
+        $('#loginError').style.display = 'none';
+      }
+    }
+
+    function showAdmin() {
+      $('#loginScreen').style.display = 'none';
+      $('#adminApp').style.display = 'flex';
+      $('#adminApp').classList.add('active');
+      loadDashboard();
+    }
+
+    function logout() {
+      showLogin();
+    }
+
+    // Always start on login screen
+    showLogin();
+
+    // Try restore session only if token exists
+    if (token) {
+      fetch(API + '/api/admin/contacts', {
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+      })
+        .then(function (res) {
+          if (res.ok) {
+            showAdmin();
+          } else {
+            showLogin('Session expired. Please log in again.');
+          }
+        })
+        .catch(function () {
+          showLogin('Server not reachable. Run: node server.js');
+        });
+    }
+
+    $('#loginBtn').addEventListener('click', doLogin);
+    $('#loginPassword').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    async function doLogin() {
+      var email = ($('#loginEmail') && $('#loginEmail').value || '').trim();
+      var password = $('#loginPassword').value;
+      if (!email || !password) {
+        showLogin('Please enter email and password.');
+        return;
+      }
+
+      $('#loginBtn').textContent = 'Signing in...';
+      $('#loginBtn').disabled = true;
+
+      try {
+        var res = await fetch(API + '/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, password: password })
+        });
+        var data = await res.json().catch(function () { return {}; });
+
+        if (res.ok && data.token) {
+          token = data.token;
+          safeSet('webolite_admin_token', token);
+          $('#loginError').style.display = 'none';
+          showAdmin();
+        } else {
+          showLogin(data.error || 'Invalid email or password');
+        }
+      } catch (err) {
+        showLogin('Cannot reach server. Run: python3 server.py');
+      }
+
+      $('#loginBtn').textContent = 'Sign In';
+      $('#loginBtn').disabled = false;
+    }
+
+    $('#logoutBtn').addEventListener('click', async function () {
+      try {
+        await fetch(API + '/api/admin/logout', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+      } catch (e) {}
+      showLogin();
+    });
+
+    /* Navigation */
+    $$('.nav-item').forEach((item) => {
+      item.addEventListener('click', () => {
+        $$('.nav-item').forEach((n) => n.classList.remove('active'));
+        item.classList.add('active');
+        $$('.page').forEach((p) => p.classList.remove('active'));
+        const page = item.dataset.page;
+        $('#page-' + page).classList.add('active');
+        if (page === 'dashboard') loadDashboard();
+        if (page === 'visitors') loadVisitors();
+        if (page === 'contacts') loadContacts();
+        if (page === 'testimonials') loadTestimonials();
+        if (page === 'portfolio') loadPortfolio();
+        if (page === 'newsletter') loadNewsletter();
+        if (page === 'content') loadContentEditor();
+        if (page === 'admins') loadAdmins();
+        if (page === 'settings') loadSettings();
+      });
+    });
+
+    /* Dashboard */
+    async function loadDashboard() {
+      try {
+        const [contacts, testimonials, newsletter] = await Promise.all([
+          api('/api/admin/contacts'),
+          api('/api/admin/testimonials'),
+          api('/api/admin/newsletter'),
+        ]);
+        $('#statContacts').textContent = contacts.count;
+        $('#statReviews').textContent = testimonials.count;
+        $('#statPending').textContent = testimonials.data.filter((t) => t.status === 'pending').length;
+        $('#statSubs').textContent = newsletter.count;
+        try {
+          const an = await api('/api/admin/analytics');
+          if (an.data) {
+            const o = document.getElementById('statOnline');
+            const vt = document.getElementById('statViewsToday');
+            if (o) o.textContent = an.data.activeNow ?? 0;
+            if (vt) vt.textContent = an.data.todayViews ?? 0;
+          }
+        } catch (e2) {}
+
+        const recent = contacts.data.slice(0, 5);
+        if (!recent.length) {
+          $('#dashRecent').innerHTML = '<div class="empty">No contacts yet</div>';
+          return;
+        }
+        $('#dashRecent').innerHTML = '<table><thead><tr><th>Name</th><th>Email</th><th>Message</th><th>Date</th></tr></thead><tbody>' +
+          recent.map((c) => '<tr><td>' + esc(c.name) + '</td><td class="text-muted">' + esc(c.email) + '</td><td class="truncate text-muted">' + esc(c.message) + '</td><td class="text-sm text-muted">' + fmtDate(c.createdAt) + '</td></tr>').join('') +
+          '</tbody></table>';
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    /* Contacts */
+    async function loadContacts() {
+      try {
+        const data = await api('/api/admin/contacts');
+        if (!data.data.length) {
+          $('#contactsTable').innerHTML = '<div class="empty">No contacts yet</div>';
+          return;
+        }
+        $('#contactsTable').innerHTML = '<table><thead><tr><th>Name</th><th>Email</th><th>Company</th><th>Budget</th><th>Message</th><th>Date</th><th></th></tr></thead><tbody>' +
+          data.data.map((c) =>
+            '<tr><td>' + esc(c.name) + '</td><td class="text-muted">' + esc(c.email) + '</td><td class="text-muted">' + esc(c.company || '—') + '</td><td class="text-muted">' + esc(c.budget || '—') + '</td><td class="truncate text-muted" title="' + esc(c.message) + '">' + esc(c.message) + '</td><td class="text-sm text-muted">' + fmtDate(c.createdAt) + '</td><td><button class="btn btn-danger btn-sm" onclick="deleteContact(\'' + c.id + '\')">Delete</button></td></tr>'
+          ).join('') + '</tbody></table>';
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    window.deleteContact = async function (id) {
+      if (!confirm('Delete this contact?')) return;
+      try {
+        await api('/api/admin/contacts/' + id, { method: 'DELETE' });
+        toast('Contact deleted', 'success');
+        loadContacts();
+      } catch (e) { toast(e.message, 'error'); }
+    };
+
+    /* Testimonials */
+    async function loadTestimonials() {
+      try {
+        const data = await api('/api/admin/testimonials');
+        if (!data.data.length) {
+          $('#testimonialsTable').innerHTML = '<div class="empty">No testimonials yet</div>';
+          return;
+        }
+        $('#testimonialsTable').innerHTML = '<table><thead><tr><th>Name</th><th>Rating</th><th>Review</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>' +
+          data.data.map((t) => {
+            const badge = '<span class="badge badge-' + t.status + '">' + t.status + '</span>';
+            let actions = '';
+            if (t.status !== 'approved') actions += '<button class="btn btn-success btn-sm" onclick="moderate(\'' + t.id + '\',\'approved\')">Approve</button> ';
+            if (t.status !== 'rejected') actions += '<button class="btn btn-ghost btn-sm" onclick="moderate(\'' + t.id + '\',\'rejected\')">Reject</button> ';
+            actions += '<button class="btn btn-danger btn-sm" onclick="deleteTestimonial(\'' + t.id + '\')">Delete</button>';
+            return '<tr><td><strong>' + esc(t.name) + '</strong><br><span class="text-sm text-muted">' + esc(t.position) + (t.company ? ', ' + esc(t.company) : '') + '</span></td><td>' + '★'.repeat(t.rating) + '</td><td class="truncate text-muted" title="' + esc(t.text) + '">' + esc(t.text) + '</td><td>' + badge + '</td><td class="text-sm text-muted">' + fmtDate(t.createdAt) + '</td><td class="actions">' + actions + '</td></tr>';
+          }).join('') + '</tbody></table>';
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    window.moderate = async function (id, status) {
+      try {
+        await api('/api/admin/testimonials/' + id, { method: 'POST', body: JSON.stringify({ status }) });
+        toast('Review ' + status, 'success');
+        loadTestimonials();
+      } catch (e) { toast(e.message, 'error'); }
+    };
+
+    window.deleteTestimonial = async function (id) {
+      if (!confirm('Delete this review?')) return;
+      try {
+        await api('/api/admin/testimonials/' + id, { method: 'DELETE' });
+        toast('Deleted', 'success');
+        loadTestimonials();
+      } catch (e) { toast(e.message, 'error'); }
+    };
+
+    /* Portfolio */
+    async function loadPortfolio() {
+      try {
+        const data = await api('/api/portfolio');
+        if (!data.data.length) {
+          $('#portfolioTable').innerHTML = '<div class="empty">No projects yet. Click “Add Project”.</div>';
+          return;
+        }
+        $('#portfolioTable').innerHTML = '<table><thead><tr><th>Title</th><th>Category</th><th>Tags</th><th>Image</th><th>Actions</th></tr></thead><tbody>' +
+          data.data.map((p) =>
+            '<tr><td><strong>' + esc(p.title) + '</strong><br><span class="text-sm text-muted">' + esc(p.catLabel) + '</span></td><td class="text-muted text-sm">' + esc(p.category) + '</td><td class="text-sm text-muted">' + (p.tags || []).join(', ') + '</td><td class="text-sm text-muted truncate">' + (p.image ? esc(p.image) : '— gradient') + '</td><td class="actions"><button class="btn btn-ghost btn-sm" onclick="editProject(\'' + p.id + '\')">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteProject(\'' + p.id + '\')">Delete</button></td></tr>'
+          ).join('') + '</tbody></table>';
+        window._portfolioCache = data.data;
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    $('#addProjectBtn').addEventListener('click', () => {
+      $('#modalTitle').textContent = 'Add Project';
+      $('#projectForm').reset();
+      $('#projectId').value = '';
+      $('#projectModal').classList.add('active');
+    });
+
+    $('#modalCancel').addEventListener('click', () => $('#projectModal').classList.remove('active'));
+
+    window.editProject = function (id) {
+      const p = (window._portfolioCache || []).find((x) => x.id === id);
+      if (!p) return;
+      $('#modalTitle').textContent = 'Edit Project';
+      $('#projectId').value = p.id;
+      $('#projTitle').value = p.title || '';
+      $('#projCatLabel').value = p.catLabel || '';
+      $('#projCategory').value = p.category || '';
+      $('#projImage').value = p.image || '';
+      $('#projGradient').value = p.gradient || 'gradient-1';
+      $('#projTags').value = (p.tags || []).join(', ');
+      $('#projDemo').value = p.demoUrl || '';
+      $('#projCase').value = p.caseUrl || '';
+      $('#projectModal').classList.add('active');
+    };
+
+    window.deleteProject = async function (id) {
+      if (!confirm('Delete this project?')) return;
+      try {
+        await api('/api/admin/portfolio/' + id, { method: 'DELETE' });
+        toast('Project deleted', 'success');
+        loadPortfolio();
+      } catch (e) { toast(e.message, 'error'); }
+    };
+
+    $('#projectForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = $('#projectId').value;
+      const payload = {
+        title: $('#projTitle').value.trim(),
+        catLabel: $('#projCatLabel').value.trim(),
+        category: $('#projCategory').value.trim(),
+        image: $('#projImage').value.trim(),
+        gradient: $('#projGradient').value,
+        tags: $('#projTags').value.split(',').map((t) => t.trim()).filter(Boolean),
+        demoUrl: $('#projDemo').value.trim() || '#',
+        caseUrl: $('#projCase').value.trim() || '#',
+      };
+      try {
+        if (id) {
+          await api('/api/admin/portfolio/' + id, { method: 'PUT', body: JSON.stringify(payload) });
+          toast('Project updated', 'success');
+        } else {
+          await api('/api/admin/portfolio', { method: 'POST', body: JSON.stringify(payload) });
+          toast('Project created', 'success');
+        }
+        $('#projectModal').classList.remove('active');
+        loadPortfolio();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    /* Newsletter */
+    async function loadNewsletter() {
+      try {
+        const data = await api('/api/admin/newsletter');
+        if (!data.data.length) {
+          $('#newsletterTable').innerHTML = '<div class="empty">No subscribers yet</div>';
+          return;
+        }
+        $('#newsletterTable').innerHTML = '<table><thead><tr><th>Email</th><th>Date</th><th></th></tr></thead><tbody>' +
+          data.data.map((n) =>
+            '<tr><td>' + esc(n.email) + '</td><td class="text-sm text-muted">' + fmtDate(n.createdAt) + '</td><td><button class="btn btn-danger btn-sm" onclick="deleteSub(\'' + n.id + '\')">Remove</button></td></tr>'
+          ).join('') + '</tbody></table>';
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    window.deleteSub = async function (id) {
+      if (!confirm('Remove this subscriber?')) return;
+      try {
+        await api('/api/admin/newsletter/' + id, { method: 'DELETE' });
+        toast('Removed', 'success');
+        loadNewsletter();
+      } catch (e) { toast(e.message, 'error'); }
+    };
+
+    /* Settings */
+    async function loadSettings() {
+      try {
+        const data = await api('/api/settings');
+        const s = data.data;
+        $('#setHeroTitle').value = s.heroTitle || '';
+        $('#setHeroSubtitle').value = s.heroSubtitle || '';
+        $('#setProjects').value = s.stats?.projects || 0;
+        $('#setSatisfaction').value = s.stats?.satisfaction || 0;
+        $('#setYears').value = s.stats?.years || 0;
+        $('#setClients').value = s.stats?.clients || 0;
+        $('#setEmail').value = s.contactEmail || '';
+        $('#setPhone').value = s.contactPhone || '';
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    $('#settingsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await api('/api/admin/settings', {
+          method: 'PUT',
+          body: JSON.stringify({
+            heroTitle: $('#setHeroTitle').value,
+            heroSubtitle: $('#setHeroSubtitle').value,
+            contactEmail: $('#setEmail').value,
+            contactPhone: $('#setPhone').value,
+            stats: {
+              projects: $('#setProjects').value,
+              satisfaction: $('#setSatisfaction').value,
+              years: $('#setYears').value,
+              clients: $('#setClients').value,
+            },
+          }),
+        });
+        toast('Settings saved', 'success');
+      } catch (err) { toast(err.message, 'error'); }
+    });
+
+    
+    /* Admin Users */
+    async function loadAdmins() {
+      try {
+        const data = await api('/api/admin/users');
+        if (!data.data.length) {
+          $('#adminsTable').innerHTML = '<div class="empty">No admins</div>';
+          return;
+        }
+        $('#adminsTable').innerHTML = '<table><thead><tr><th>Name</th><th>Email</th><th>Created</th><th></th></tr></thead><tbody>' +
+          data.data.map((a) =>
+            '<tr><td>' + esc(a.name) + '</td><td>' + esc(a.email) + '</td><td class="text-sm text-muted">' + fmtDate(a.createdAt) + '</td><td><button class="btn btn-danger btn-sm" onclick="deleteAdmin(' + a.id + ')">Delete</button></td></tr>'
+          ).join('') + '</tbody></table>';
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    window.deleteAdmin = async function (id) {
+      if (!confirm('Delete this admin user?')) return;
+      try {
+        await api('/api/admin/users/' + id, { method: 'DELETE' });
+        toast('Admin deleted', 'success');
+        loadAdmins();
+      } catch (e) { toast(e.message, 'error'); }
+    };
+
+    const addAdminBtn = document.getElementById('addAdminBtn');
+    if (addAdminBtn) {
+      addAdminBtn.addEventListener('click', () => {
+        document.getElementById('adminUserForm').reset();
+        document.getElementById('adminModal').classList.add('active');
+      });
+    }
+    const adminModalCancel = document.getElementById('adminModalCancel');
+    if (adminModalCancel) {
+      adminModalCancel.addEventListener('click', () => {
+        document.getElementById('adminModal').classList.remove('active');
+      });
+    }
+    const adminUserForm = document.getElementById('adminUserForm');
+    if (adminUserForm) {
+      adminUserForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          await api('/api/admin/users', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: document.getElementById('adminName').value.trim(),
+              email: document.getElementById('adminEmail').value.trim(),
+              password: document.getElementById('adminPassword').value,
+            }),
+          });
+          toast('Admin created', 'success');
+          document.getElementById('adminModal').classList.remove('active');
+          loadAdmins();
+        } catch (err) { toast(err.message, 'error'); }
+      });
+    }
+
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) {
+      changePasswordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          await api('/api/admin/password', {
+            method: 'PUT',
+            body: JSON.stringify({
+              oldPassword: document.getElementById('oldPassword').value,
+              newPassword: document.getElementById('newPassword').value,
+            }),
+          });
+          toast('Password updated', 'success');
+          changePasswordForm.reset();
+        } catch (err) { toast(err.message, 'error'); }
+      });
+    }
+
+
+    
+    /* ===== Full Site Content Editor ===== */
+    let _contentCache = {};
+    let _activeSection = 'hero';
+
+    async function loadContentEditor() {
+      const editor = document.getElementById('contentEditor');
+      if (editor) editor.innerHTML = '<div class="empty">Loading content...</div>';
+      try {
+        const res = await fetch(API + '/api/content');
+        if (!res.ok) throw new Error('HTTP ' + res.status + ' — content API failed');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Content API returned error');
+        _contentCache = data.data || {};
+        const keys = Object.keys(_contentCache);
+        if (!keys.length) {
+          if (editor) editor.innerHTML = '<div class="empty">No content in database yet. Restart server with: python3 server.py<br>Content will auto-seed on startup.</div>';
+          toast('Content empty — restart python3 server.py', 'error');
+          return;
+        }
+        renderContentEditor(_activeSection);
+        bindContentTabs();
+      } catch (e) {
+        console.error('Content load error:', e);
+        toast(e.message || 'Failed to load', 'error');
+        if (editor) {
+          editor.innerHTML = '<div class="empty">Failed to load content.<br><br><strong>' + (e.message || '') + '</strong><br><br>1. Run: <code>python3 server.py</code><br>2. Open site via <code>http://localhost:3000/admin.html</code><br>3. Hard refresh (Ctrl+Shift+R)</div>';
+        }
+      }
+    }
+
+    function bindContentTabs() {
+      document.querySelectorAll('.content-tab').forEach((btn) => {
+        btn.onclick = () => {
+          document.querySelectorAll('.content-tab').forEach((b) => {
+            b.classList.remove('active', 'btn-primary');
+            b.classList.add('btn-ghost');
+          });
+          btn.classList.add('active', 'btn-primary');
+          btn.classList.remove('btn-ghost');
+          _activeSection = btn.dataset.section;
+          renderContentEditor(_activeSection);
+        };
+      });
+    }
+
+    function renderContentEditor(section) {
+      const data = _contentCache[section];
+      const el = $('#contentEditor');
+      if (!data) {
+        el.innerHTML = '<div class="empty">No data for this section yet.</div>';
+        return;
+      }
+
+      if (section === 'hero') {
+        el.innerHTML = `
+          <div class="form-group"><label>Badge Text</label><input id="c_badge" value="${esc(data.badge||'')}"></div>
+          <div class="form-group"><label>Title (use \\n for line break)</label><input id="c_title" value="${esc(data.title||'')}"></div>
+          <div class="form-group"><label>Subtitle</label><textarea id="c_subtitle" rows="3">${esc(data.subtitle||'')}</textarea></div>
+          <div class="form-grid">
+            <div class="form-group"><label>Primary Button</label><input id="c_ctaP" value="${esc(data.ctaPrimary||'')}"></div>
+            <div class="form-group"><label>Secondary Button</label><input id="c_ctaS" value="${esc(data.ctaSecondary||'')}"></div>
+          </div>`;
+      } else if (section === 'services' || section === 'process' || section === 'why') {
+        const items = section === 'why' ? (data.points || []) : data;
+        const isWhy = section === 'why';
+        let html = '';
+        if (isWhy) {
+          html += `<div class="form-group"><label>Section Title</label><input id="c_why_title" value="${esc(data.title||'')}"></div>`;
+        }
+        html += `<p class="text-sm text-muted" style="margin-bottom:12px;">Edit items below. Changes save as a full list.</p>`;
+        (isWhy ? items : items).forEach((item, i) => {
+          html += `<div class="card" style="padding:16px;margin-bottom:12px;background:var(--bg);">
+            <div class="form-grid">
+              <div class="form-group"><label>${isWhy || section==='services' ? 'Title' : 'Step'}</label>
+                <input class="c_item_title" data-i="${i}" value="${esc(item.title || item.step || '')}"></div>
+              ${section==='process' ? `<div class="form-group"><label>Number</label><input class="c_item_step" data-i="${i}" value="${esc(item.step||'')}"></div>` : ''}
+              ${section==='services' ? `<div class="form-group"><label>Icon key</label><input class="c_item_icon" data-i="${i}" value="${esc(item.icon||'')}"></div>` : ''}
+            </div>
+            <div class="form-group"><label>Description</label>
+              <textarea class="c_item_desc" data-i="${i}" rows="2">${esc(item.desc||'')}</textarea></div>
+          </div>`;
+        });
+        el.innerHTML = html;
+      } else if (section === 'pricing') {
+        let html = '';
+        data.forEach((plan, i) => {
+          html += `<div class="card" style="padding:16px;margin-bottom:16px;background:var(--bg);">
+            <strong style="display:block;margin-bottom:12px;">${esc(plan.name)} ${plan.featured?'★ Featured':''}</strong>
+            <div class="form-grid">
+              <div class="form-group"><label>Name</label><input class="c_plan_name" data-i="${i}" value="${esc(plan.name||'')}"></div>
+              <div class="form-group"><label>Price</label><input class="c_plan_price" data-i="${i}" value="${esc(plan.price||'')}"></div>
+              <div class="form-group"><label>Period</label><input class="c_plan_period" data-i="${i}" value="${esc(plan.period||'')}"></div>
+              <div class="form-group"><label>CTA Text</label><input class="c_plan_cta" data-i="${i}" value="${esc(plan.cta||'')}"></div>
+            </div>
+            <div class="form-group"><label>Description</label><textarea class="c_plan_desc" data-i="${i}" rows="2">${esc(plan.desc||'')}</textarea></div>
+            <div class="form-group"><label>Features (one per line)</label><textarea class="c_plan_features" data-i="${i}" rows="5">${esc((plan.features||[]).join('\\n'))}</textarea></div>
+          </div>`;
+        });
+        el.innerHTML = html;
+      } else if (section === 'faq') {
+        let html = '';
+        data.forEach((item, i) => {
+          html += `<div class="card" style="padding:16px;margin-bottom:12px;background:var(--bg);">
+            <div class="form-group"><label>Question</label><input class="c_faq_q" data-i="${i}" value="${esc(item.q||'')}"></div>
+            <div class="form-group"><label>Answer</label><textarea class="c_faq_a" data-i="${i}" rows="3">${esc(item.a||'')}</textarea></div>
+          </div>`;
+        });
+        el.innerHTML = html;
+      } else if (section === 'tech') {
+        el.innerHTML = `<div class="form-group"><label>Technologies (comma separated)</label>
+          <textarea id="c_tech" rows="3">${esc((data||[]).join(', '))}</textarea></div>`;
+      } else if (section === 'cta') {
+        el.innerHTML = `
+          <div class="form-group"><label>Title</label><input id="c_cta_title" value="${esc(data.title||'')}"></div>
+          <div class="form-group"><label>Subtitle</label><textarea id="c_cta_sub" rows="2">${esc(data.subtitle||'')}</textarea></div>
+          <div class="form-group"><label>Button Text</label><input id="c_cta_btn" value="${esc(data.button||'')}"></div>`;
+      } else if (section === 'footer') {
+        el.innerHTML = `
+          <div class="form-group"><label>Tagline</label><input id="c_foot_tag" value="${esc(data.tagline||'')}"></div>
+          <div class="form-group"><label>Description</label><textarea id="c_foot_desc" rows="3">${esc(data.description||'')}</textarea></div>`;
+      } else {
+        el.innerHTML = `<div class="form-group"><label>Raw JSON</label><textarea id="c_raw" rows="12">${esc(JSON.stringify(data,null,2))}</textarea></div>`;
+      }
+    }
+
+    function collectContent(section) {
+      const data = _contentCache[section];
+      if (section === 'hero') {
+        return {
+          badge: $('#c_badge')?.value || '',
+          title: $('#c_title')?.value || '',
+          subtitle: $('#c_subtitle')?.value || '',
+          ctaPrimary: $('#c_ctaP')?.value || '',
+          ctaSecondary: $('#c_ctaS')?.value || '',
+        };
+      }
+      if (section === 'services') {
+        return Array.from(document.querySelectorAll('.c_item_title')).map((el, i) => ({
+          icon: document.querySelector(`.c_item_icon[data-i="${i}"]`)?.value || 'web',
+          title: el.value,
+          desc: document.querySelector(`.c_item_desc[data-i="${i}"]`)?.value || '',
+        }));
+      }
+      if (section === 'process') {
+        return Array.from(document.querySelectorAll('.c_item_title')).map((el, i) => ({
+          step: document.querySelector(`.c_item_step[data-i="${i}"]`)?.value || String(i+1).padStart(2,'0'),
+          title: el.value,
+          desc: document.querySelector(`.c_item_desc[data-i="${i}"]`)?.value || '',
+        }));
+      }
+      if (section === 'why') {
+        return {
+          title: $('#c_why_title')?.value || '',
+          points: Array.from(document.querySelectorAll('.c_item_title')).map((el, i) => ({
+            title: el.value,
+            desc: document.querySelector(`.c_item_desc[data-i="${i}"]`)?.value || '',
+          })),
+        };
+      }
+      if (section === 'pricing') {
+        return Array.from(document.querySelectorAll('.c_plan_name')).map((el, i) => {
+          const old = data[i] || {};
+          return {
+            ...old,
+            name: el.value,
+            price: document.querySelector(`.c_plan_price[data-i="${i}"]`)?.value || '',
+            period: document.querySelector(`.c_plan_period[data-i="${i}"]`)?.value || '',
+            cta: document.querySelector(`.c_plan_cta[data-i="${i}"]`)?.value || '',
+            desc: document.querySelector(`.c_plan_desc[data-i="${i}"]`)?.value || '',
+            features: (document.querySelector(`.c_plan_features[data-i="${i}"]`)?.value || '').split('\\n').map(s=>s.trim()).filter(Boolean),
+          };
+        });
+      }
+      if (section === 'faq') {
+        return Array.from(document.querySelectorAll('.c_faq_q')).map((el, i) => ({
+          q: el.value,
+          a: document.querySelector(`.c_faq_a[data-i="${i}"]`)?.value || '',
+        }));
+      }
+      if (section === 'tech') {
+        return ($('#c_tech')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
+      }
+      if (section === 'cta') {
+        return { title: $('#c_cta_title')?.value||'', subtitle: $('#c_cta_sub')?.value||'', button: $('#c_cta_btn')?.value||'' };
+      }
+      if (section === 'footer') {
+        return { tagline: $('#c_foot_tag')?.value||'', description: $('#c_foot_desc')?.value||'' };
+      }
+      try { return JSON.parse($('#c_raw')?.value || '{}'); } catch { return data; }
+    }
+
+    const saveContentBtn = document.getElementById('saveContentBtn');
+    if (saveContentBtn) {
+      saveContentBtn.addEventListener('click', async () => {
+        const payload = collectContent(_activeSection);
+        try {
+          await api('/api/admin/content/' + _activeSection, {
+            method: 'PUT',
+            body: JSON.stringify({ data: payload }),
+          });
+          _contentCache[_activeSection] = payload;
+          const st = document.getElementById('contentSaveStatus');
+          if (st) st.textContent = 'Saved ✓ — refresh the homepage to see changes';
+          toast('Content saved', 'success');
+        } catch (e) {
+          toast(e.message, 'error');
+        }
+      });
+    }
+
+
+    
+    /* Live Visitors Dashboard */
+    let _visitorTimer = null;
+
+    async function loadVisitors() {
+      try {
+        let res = await fetch(API + '/api/admin/analytics', {
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+        });
+        if (res.status === 404) {
+          res = await fetch(API + '/api/analytics', {
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+          });
+        }
+        if (res.status === 401) { logout(); return; }
+        if (!res.ok) throw new Error('Analytics failed (' + res.status + '). Restart with latest server.py');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Analytics error');
+        const d = data.data || {};
+        const activeEl = document.getElementById('vActive');
+        const todayEl = document.getElementById('vToday');
+        const totalEl = document.getElementById('vTotal');
+        const topEl = document.getElementById('vTop');
+        if (activeEl) activeEl.textContent = d.activeNow ?? 0;
+        if (todayEl) todayEl.textContent = d.todayViews ?? 0;
+        if (totalEl) totalEl.textContent = d.totalViews ?? 0;
+        if (topEl) topEl.textContent = (d.topPages && d.topPages[0]) ? d.topPages[0].path : '—';
+
+        // Active sessions
+        const activeBox = document.getElementById('activeSessionsTable');
+        if (activeBox) {
+          if (!d.activeSessions || !d.activeSessions.length) {
+            activeBox.innerHTML = '<div class="empty">No one online right now</div>';
+          } else {
+            activeBox.innerHTML = '<table><thead><tr><th>Path</th><th>IP</th><th>Device</th><th>Last Seen</th></tr></thead><tbody>' +
+              d.activeSessions.map(function (s) {
+                var ua = (s.userAgent || '').slice(0, 40);
+                return '<tr><td>' + esc(s.path || '/') + '</td><td class="text-muted text-sm">' + esc(s.ip || '—') +
+                  '</td><td class="text-muted text-sm truncate">' + esc(ua) +
+                  '</td><td class="text-sm text-muted">' + fmtDate(s.lastSeen) + '</td></tr>';
+              }).join('') + '</tbody></table>';
+          }
+        }
+
+        // Top pages
+        const topBox = document.getElementById('topPagesTable');
+        if (topBox) {
+          if (!d.topPages || !d.topPages.length) {
+            topBox.innerHTML = '<div class="empty">No data yet</div>';
+          } else {
+            topBox.innerHTML = '<table><thead><tr><th>Page</th><th>Views</th></tr></thead><tbody>' +
+              d.topPages.map(function (p) {
+                return '<tr><td>' + esc(p.path) + '</td><td><strong>' + p.views + '</strong></td></tr>';
+              }).join('') + '</tbody></table>';
+          }
+        }
+
+        // Recent
+        const recentBox = document.getElementById('recentVisitsTable');
+        if (recentBox) {
+          if (!d.recent || !d.recent.length) {
+            recentBox.innerHTML = '<div class="empty">No visits yet — open the homepage to generate traffic</div>';
+          } else {
+            recentBox.innerHTML = '<table><thead><tr><th>Path</th><th>IP</th><th>Referrer</th><th>Time</th></tr></thead><tbody>' +
+              d.recent.map(function (v) {
+                return '<tr><td>' + esc(v.path || '/') + '</td><td class="text-muted text-sm">' + esc(v.ip || '—') +
+                  '</td><td class="text-muted text-sm truncate">' + esc(v.referrer || 'Direct') +
+                  '</td><td class="text-sm text-muted">' + fmtDate(v.createdAt) + '</td></tr>';
+              }).join('') + '</tbody></table>';
+          }
+        }
+      } catch (e) {
+        toast(e.message, 'error');
+      }
+
+      // Auto-refresh every 5s while on this page
+      if (_visitorTimer) clearInterval(_visitorTimer);
+      _visitorTimer = setInterval(function () {
+        var page = document.getElementById('page-visitors');
+        if (page && page.classList.contains('active')) {
+          loadVisitors();
+        } else {
+          clearInterval(_visitorTimer);
+          _visitorTimer = null;
+        }
+      }, 5000);
+    }
+
+    const refreshVisitorsBtn = document.getElementById('refreshVisitorsBtn');
+    if (refreshVisitorsBtn) {
+      refreshVisitorsBtn.addEventListener('click', loadVisitors);
+    }
+
+
+    /* Utils */
+    function esc(s) {
+      if (!s) return '';
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      try {
+        return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch { return iso; }
+    }
+  })();
+  </script>
+</body>
+</html>
